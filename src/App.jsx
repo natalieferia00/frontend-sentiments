@@ -1,89 +1,87 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
 
 function App() {
-  const [text, setText] = useState('');
-  const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [mapLink, setMapLink] = useState('');
+  const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. URL base de producción con el prefijo /api/v1
-  const API_URL = "https://backend-sentiment-ai.onrender.com/api/v1";
+  // 💡 DETECTA AUTOMÁTICAMENTE EL ENTORNO:
+  // Si estás ejecutando tu app en localhost, usa el puerto 8000 de tu Mac.
+  // Si la subes a producción, usa de forma limpia la URL correcta de tu Render (sin el -ai).
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://127.0.0.1:8000'
+    : 'https://backend-sentiments.onrender.com';
 
-  // Función para cargar el historial mapeada al endpoint real de reviews
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`${API_URL}/reviews`);
-      const data = await res.json();
-      // Validamos que la data sea un arreglo antes de asignarla para evitar crashes
-      setHistory(Array.isArray(data) ? data : []);
-    } catch (e) { 
-      console.error("Error cargando el historial:", e); 
-    }
-  };
+  const manejarAnalisis = async (e) => {
+    e.preventDefault();
+    if (!mapLink.trim()) return;
 
-  useEffect(() => { fetchHistory(); }, []);
-
-  const handleAnalyze = async () => {
-    if (!text) return;
     setLoading(true);
+    setResultado(null); 
+
     try {
-      // 2. Petición POST al endpoint /api/v1/analyze con el parámetro ajustado
-      const res = await fetch(`${API_URL}/analyze`, {
+      const response = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Enviamos 'review_text' para cumplir estrictamente con el esquema AnalyzeRequest de FastAPI
-        body: JSON.stringify({ review_text: text }) 
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: mapLink }), 
       });
-      
-      const data = await res.json();
-      setResult(data);
-      fetchHistory(); // Recargar historial tras analizar
-      setText(''); // Limpiar input
-    } catch (e) { 
-      console.error("Error en el análisis:", e); 
+
+      if (response.ok) {
+        const data = await response.json();
+        setResultado(data); 
+      } else {
+        console.error("Error en el servidor al analizar. Código:", response.status);
+      }
+    } catch (error) {
+      console.error("Error al conectar con el servidor:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="app-container">
       <div className="card">
-        <h1>Sentiment AI</h1>
-        <p className="subtitle">Software Engineering Project - Real Time Analysis</p>
+        <center>
+          <h1>Sentiment AI</h1>
+          <p className="subtitle">Software Engineering Project - Real Time Analysis</p>
+        </center>
 
-        <textarea
-          rows="3"
-          placeholder="Escribe una opinión..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
+        <form onSubmit={manejarAnalisis}>
+          <textarea 
+            rows="2"
+            placeholder="Introduce las palabras o frases a analizar..." 
+            value={mapLink}
+            onChange={(e) => setMapLink(e.target.value)}
+          />
+          <button 
+            type="submit" 
+            className="btn-analyze" 
+            disabled={loading || !mapLink.trim()}
+          >
+            {loading ? 'Analizando...' : 'Analizar y Guardar'}
+          </button>
+        </form>
 
-        <button className="btn-analyze" onClick={handleAnalyze} disabled={loading}>
-          {loading ? 'Procesando...' : 'Analizar y Guardar'}
-        </button>
-
-        {result && (
-          <div className="result-box" style={{ backgroundColor: `${result.color}20`, borderColor: result.color }}>
-            <span style={{ color: result.color, fontWeight: 'bold' }}>{result.sentiment}</span>
-            <p>"{result.text || text}"</p>
+        {resultado && (
+          <div style={{ marginTop: '2rem' }}>
+            <div className="reseña-card" style={{ borderLeft: `5px solid ${resultado.color}` }}>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                <strong>Texto analizado:</strong> <span style={{ color: '#94a3b8' }}>{resultado.text}</span>
+              </p>
+              <p style={{ margin: 0, fontSize: '0.95rem' }}>
+                <strong>Sentimiento:</strong>{' '}
+                <span style={{ color: resultado.color, fontWeight: 'bold' }}>
+                  {resultado.sentiment}
+                </span>
+                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}> ({resultado.score})</span>
+              </p>
+            </div>
           </div>
         )}
-
-        <div className="history-section">
-          <h3 style={{marginTop: '2rem', fontSize: '1rem', opacity: 0.7}}>Historial Reciente</h3>
-          {history.length === 0 ? (
-            <p style={{fontSize: '0.85rem', opacity: 0.5, marginTop: '0.5rem'}}>No hay análisis registrados en Atlas aún.</p>
-          ) : (
-            history.map((item) => (
-              <div key={item._id || item.date} className="history-item">
-                <span className="dot" style={{ backgroundColor: item.color || '#6B7280' }}></span>
-                <small>{item.date} - {item.sentiment}:</small>
-                <p>{item.text ? item.text.substring(0, 40) : ''}...</p>
-              </div>
-            ))
-          )}
-        </div>
       </div>
     </div>
   );

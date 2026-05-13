@@ -83,3 +83,25 @@ textarea:focus {
   border-radius: 0.75rem;
   border-left: 5px solid;
 }
+.lista-reseñas {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 300px; /* Por si se acumulan muchas, añade scroll */
+  overflow-y: auto;
+}
+
+.reseña-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: left;
+  transition: transform 0.2s ease;
+}
+
+.reseña-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
