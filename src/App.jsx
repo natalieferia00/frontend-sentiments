@@ -28,12 +28,14 @@ function App() {
     if (!text) return;
     setLoading(true);
     try {
-      // 2. Petición POST al endpoint /api/v1/analyze
+      // 2. Petición POST al endpoint /api/v1/analyze con el parámetro ajustado
       const res = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        // Enviamos 'review_text' para cumplir estrictamente con el esquema AnalyzeRequest de FastAPI
+        body: JSON.stringify({ review_text: text }) 
       });
+      
       const data = await res.json();
       setResult(data);
       fetchHistory(); // Recargar historial tras analizar
@@ -64,7 +66,7 @@ function App() {
         {result && (
           <div className="result-box" style={{ backgroundColor: `${result.color}20`, borderColor: result.color }}>
             <span style={{ color: result.color, fontWeight: 'bold' }}>{result.sentiment}</span>
-            <p>"{result.text}"</p>
+            <p>"{result.text || text}"</p>
           </div>
         )}
 
